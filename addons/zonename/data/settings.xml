@@ -1,0 +1,95 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <centered>true</centered>
+        <displayTime>3</displayTime>
+        <fadeTime>1</fadeTime>
+        <regionName>
+            <bg>
+                <alpha>255</alpha>
+                <blue>0</blue>
+                <green>0</green>
+                <red>0</red>
+                <visible>false</visible>
+            </bg>
+            <flags>
+                <bold>true</bold>
+                <bottom>false</bottom>
+                <italic>false</italic>
+                <right>false</right>
+            </flags>
+            <format>- %s -</format>
+            <padding>0</padding>
+            <pos>
+                <x>0</x>
+                <y>0</y>
+            </pos>
+            <text>
+                <alpha>85</alpha>
+                <blue>193</blue>
+                <centerAdjust>4</centerAdjust>
+                <font>Century Schoolbook</font>
+                <fonts>
+                    <1>sans-serif</1>
+                    <2>Arial</2>
+                    <3>Trebuchet MS</3>
+                </fonts>
+                <green>255</green>
+                <red>255</red>
+                <size>24</size>
+                <stroke>
+                    <alpha>30</alpha>
+                    <blue>38</blue>
+                    <green>47</green>
+                    <red>51</red>
+                    <width>4</width>
+                </stroke>
+                <visible>true</visible>
+            </text>
+        </regionName>
+        <waitTime>3</waitTime>
+        <zoneName>
+            <bg>
+                <alpha>255</alpha>
+                <blue>0</blue>
+                <green>0</green>
+                <red>0</red>
+                <visible>false</visible>
+            </bg>
+            <flags>
+                <bold>true</bold>
+                <bottom>false</bottom>
+                <italic>false</italic>
+                <right>false</right>
+            </flags>
+            <format>%s</format>
+            <padding>0</padding>
+            <pos>
+                <x>0</x>
+                <y>0</y>
+            </pos>
+            <text>
+                <alpha>85</alpha>
+                <blue>193</blue>
+                <centerAdjust>3</centerAdjust>
+                <font>Century Schoolbook</font>
+                <fonts>
+                    <1>sans-serif</1>
+                    <2>Arial</2>
+                    <3>Trebuchet MS</3>
+                </fonts>
+                <green>255</green>
+                <red>255</red>
+                <size>36</size>
+                <stroke>
+                    <alpha>30</alpha>
+                    <blue>38</blue>
+                    <green>47</green>
+                    <red>51</red>
+                    <width>4</width>
+                </stroke>
+                <visible>true</visible>
+            </text>
+        </zoneName>
+    </global>
+</settings>
