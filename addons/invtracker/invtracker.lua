@@ -38,15 +38,18 @@ res = require('resources')
 
 local CUTSCENE_STATUS_ID = 4
 local SCROLL_LOCK_KEY = 70
-local MIN_TIME_SINCE_STARTING = 30
 local MAX_EQUIPMENT_SIZE = 16
 local DEFAULT_ITEM_STATUS = 0
 local EQUIPPED_ITEM_STATUS = 5
 local LINKSHELL_EQUIPPED_ITEM_STATUS = 19
 local BAZAAR_ITEM_STATUS = 25
 local EQUIPMENT_CHANGED_PACKET = 0x50
-local SEARCH_MESSAGE_SET_PACKET = 0xE0
+local LINKSHELL_EQUIP_PACKET = 0xE0
+local INVENTORY_SIZE_CHANGED_PACKET = 0x1C
 local INVENTORY_FINISH_PACKET = 0x1D
+local LOGIN_ZONE_PACKET = 0x0A
+local TREASURE_FIND_ITEM_PACKET = 0xD2
+local TREASURE_LOT_ITEM_PACKET = 0xD3
 
 hideKey = SCROLL_LOCK_KEY
 is_hidden_by_cutscene = false
@@ -89,8 +92,11 @@ defaults.slotImage.mogWardrobe = {}
 defaults.slotImage.mogWardrobe.visible = false
 defaults.slotImage.mogWardrobe.maxColumns = 5
 defaults.slotImage.tempInventory = {}
-defaults.slotImage.tempInventory.visible = true
 defaults.slotImage.tempInventory.maxColumns = 1
+defaults.slotImage.tempInventory.visible = false
+defaults.slotImage.treasury = {}
+defaults.slotImage.treasury.visible = false
+defaults.slotImage.treasury.maxColumns = 1
 defaults.slotImage.status = {}
 defaults.slotImage.status.default = {}
 defaults.slotImage.status.default.color = {}
@@ -168,14 +174,14 @@ defaults.slotImage.status.tempItem = {}
 defaults.slotImage.status.tempItem.color = {}
 defaults.slotImage.status.tempItem.color.alpha = 255
 defaults.slotImage.status.tempItem.color.red = 255
-defaults.slotImage.status.tempItem.color.green = 30
-defaults.slotImage.status.tempItem.color.blue = 30
+defaults.slotImage.status.tempItem.color.green = 130
+defaults.slotImage.status.tempItem.color.blue = 255
 defaults.slotImage.status.tempItem.background = {}
 defaults.slotImage.status.tempItem.background.color = {}
 defaults.slotImage.status.tempItem.background.color.alpha = 200
 defaults.slotImage.status.tempItem.background.color.red = 100
 defaults.slotImage.status.tempItem.background.color.green = 0
-defaults.slotImage.status.tempItem.background.color.blue = 0
+defaults.slotImage.status.tempItem.background.color.blue = 100
 defaults.slotImage.status.empty = {}
 defaults.slotImage.status.empty.color = {}
 defaults.slotImage.status.empty.color.alpha = 150
@@ -192,33 +198,23 @@ defaults.slotImage.status.empty.background.color.blue = 0
 local settings = config.load(defaults)
 config.save(settings)
 
-settings.slotImage.equipment.index = 1
-settings.slotImage.inventory.index = 2
-settings.slotImage.mogSafe.index = 3
-settings.slotImage.mogStorage.index = 4
-settings.slotImage.mogLocker.index = 5
-settings.slotImage.mogSatchel.index = 6
-settings.slotImage.mogSack.index = 7
-settings.slotImage.mogCase.index = 8
-settings.slotImage.mogWardrobe.index = 9
-settings.slotImage.tempInventory.index = 10
 settings.slotImage.box = {}
-settings.slotImage.box.texture = {}
-settings.slotImage.box.texture.path = windower.addon_path..'slot.png'
-settings.slotImage.box.texture.fit = true
 settings.slotImage.box.size = {}
 settings.slotImage.box.size.height = 2
 settings.slotImage.box.size.width = 2
+settings.slotImage.box.texture = {}
+settings.slotImage.box.texture.path = windower.addon_path..'slot.png'
+settings.slotImage.box.texture.fit = false
 settings.slotImage.box.repeatable = {}
 settings.slotImage.box.repeatable.x = 1
 settings.slotImage.box.repeatable.y = 1
 settings.slotImage.background = {}
-settings.slotImage.background.texture = {}
-settings.slotImage.background.texture.path = windower.addon_path..'slot.png'
-settings.slotImage.background.texture.fit = true
 settings.slotImage.background.size = {}
 settings.slotImage.background.size.height = 3
 settings.slotImage.background.size.width = 3
+settings.slotImage.background.texture = {}
+settings.slotImage.background.texture.path = windower.addon_path..'slot.png'
+settings.slotImage.background.texture.fit = false
 settings.slotImage.background.repeatable = {}
 settings.slotImage.background.repeatable.x = 1
 settings.slotImage.background.repeatable.y = 1
@@ -226,8 +222,6 @@ settings.slotImage.background.repeatable.y = 1
 local windower_settings = windower.get_windower_settings()
 local yRes = windower_settings.ui_y_res
 local xRes = windower_settings.ui_x_res
-local xBase = settings.slotImage.pos.x
-local yBase = settings.slotImage.pos.y
 local current_block = 0
 local current_slot = 1
 local current_row = 1
@@ -235,10 +229,12 @@ local current_column = 1
 local last_column = 1
 local items = {}
 local slot_images = {}
-local start_time = 0
+local inventory_loaded = false
 
 config.register(settings, function(settings)
     hideKey = settings.HideKey
+    xBase = settings.slotImage.pos.x
+    yBase = settings.slotImage.pos.y
 end)
 
 windower.register_event('load',function()
@@ -247,28 +243,26 @@ windower.register_event('load',function()
     end
 end)
 
-windower.register_event('login', function()
-    initialize()
-    start_time = os.time()
+windower.register_event('login',function()
+    update()
+    hide()
 end)
 
 windower.register_event('logout', function(...)
+    inventory_loaded = false
     hide()
     clear()
 end)
 
-windower.register_event('incoming chunk',function(id,org,modi,is_injected,is_blocked)
-    if (min_time_has_elapsed() and id == EQUIPMENT_CHANGED_PACKET or id == SEARCH_MESSAGE_SET_PACKET or id == INVENTORY_FINISH_PACKET) then
-        update()
+windower.register_event('incoming chunk',function(id,_org,_modi,_is_injected,_is_blocked)
+    if (id == LOGIN_ZONE_PACKET) then
+        inventory_loaded = false
+    elseif (id == INVENTORY_FINISH_PACKET) then
+        update_if_ready()
+        initialize()
+    elseif (id == TREASURE_FIND_ITEM_PACKET or id == TREASURE_LOT_ITEM_PACKET) then
+        if settings.slotImage.treasury.visible then update_if_ready() end
     end
-end)
-
-windower.register_event('add item', function(...)
-    update_if_min_time_has_elapsed()
-end)
-
-windower.register_event('remove item', function(...)
-    update_if_min_time_has_elapsed()
 end)
 
 windower.register_event('status change', function(new_status_id)
@@ -276,23 +270,22 @@ windower.register_event('status change', function(new_status_id)
     toggle_display_if_cutscene(is_cutscene_playing)
 end)
 
-windower.register_event('keyboard', function(dik, down, flags, blocked)
+windower.register_event('keyboard', function(dik, down, _flags, _blocked)
     toggle_display_if_hide_key_is_pressed(dik, down)
 end)
 
-function update_if_min_time_has_elapsed()
-    if (min_time_has_elapsed()) then
+function initialize()
+    if (not inventory_loaded) then
+        inventory_loaded = true
         update()
+        show()
     end
 end
 
-function min_time_has_elapsed()
-    return os.time() - start_time > MIN_TIME_SINCE_STARTING
-end
-
-function initialize()
-    update()
-    show()
+function update_if_ready()
+    if (inventory_loaded) then
+        update()
+    end
 end
 
 function update()
@@ -338,8 +331,8 @@ function update_items()
     update_bag(settings.slotImage.mogWardrobe,items.wardrobe2,items.max_wardrobe2,items.enabled_wardrobe2)
     update_bag(settings.slotImage.mogWardrobe,items.wardrobe3,items.max_wardrobe3,items.enabled_wardrobe3)
     update_bag(settings.slotImage.mogWardrobe,items.wardrobe4,items.max_wardrobe4,items.enabled_wardrobe4)
-    update_temp_bag(settings.slotImage.tempInventory,items.treasure,#items.treasure)
-    update_temp_bag(settings.slotImage.tempInventory,items.temporary,items.max_temporary)
+    update_temp_bag(settings.slotImage.tempInventory,items.temporary)
+    update_treasure_bag(settings.slotImage.treasury,items.treasure)
 end
 
 function update_bag(config, bag, max, enabled)
@@ -349,13 +342,31 @@ function update_bag(config, bag, max, enabled)
     end
 end
 
-function update_temp_bag(config, bag, max)
+function update_temp_bag(config, bag)
     if (config.visible and bag.enabled) then
         initialize_block()
-        for key=1,max,1 do
+        for key=1,#bag,1 do
             if bag[key].count > 0 then
-                print_slot(settings.slotImage.status.tempItem,config.maxColumns,max)
+                print_slot(settings.slotImage.status.tempItem,config.maxColumns,#bag+1)
+            else
+                if slot_images[current_block][key] ~= nil then
+                    slot_images[current_block][key].background:alpha(0)
+                    slot_images[current_block][key].box:alpha(0)
+                end
             end
+        end
+    end
+end
+
+function update_treasure_bag(config,bag)
+    if (config.visible) then
+        initialize_block()
+        for k, _v in ipairs(slot_images[current_block]) do
+            slot_images[current_block][k].background:alpha(0)
+            slot_images[current_block][k].box:alpha(0)
+        end
+        for _k, _v in pairs(bag) do
+            print_slot(settings.slotImage.status.tempItem,config.maxColumns,#bag+1)
         end
     end
 end
@@ -379,7 +390,7 @@ function print_equipment(status)
 end
 
 function print_bag(config, bag, max)
-    sort_table()
+    sort_table(bag)
     for key=1,max,1 do
       if (bag[key].count > 0) then
           print_item(config,bag[key],max)
@@ -389,7 +400,7 @@ function print_bag(config, bag, max)
     end
 end
 
-function sort_table()
+function sort_table(bag)
     table.sort(bag, function(a,b)
         if (a.status ~= b.status) then
             return a.status > b.status
@@ -508,7 +519,7 @@ function toggle_display_if_cutscene(is_cutscene_playing)
     if (is_cutscene_playing) and (not is_hidden_by_key) then
         is_hidden_by_cutscene = true
         hide()
-    elseif (not is_cutscene_playing) and (not is_hidden_by_key) then
+    elseif inventory_loaded and (not is_cutscene_playing) and (not is_hidden_by_key) then
         is_hidden_by_cutscene = false
         show()
     end
