@@ -53,9 +53,9 @@ local TREASURE_LOT_ITEM_PACKET = 0xD3
 local GIL_ITEM_ID = 0xFFFF
 local LINKSHELL_ACTIVE_PACKET_DATA = 19
 
-hideKey = SCROLL_LOCK_KEY
-is_hidden_by_cutscene = false
-is_hidden_by_key = false
+local hideKey = SCROLL_LOCK_KEY
+local is_hidden_by_cutscene = false
+local is_hidden_by_key = false
 
 defaults = {}
 defaults.HideKey = SCROLL_LOCK_KEY
@@ -249,6 +249,7 @@ end)
 
 windower.register_event('login',function()
     update()
+    hide()
 end)
 
 windower.register_event('logout', function(...)
@@ -258,18 +259,15 @@ windower.register_event('logout', function(...)
 end)
 
 windower.register_event('add item', function(id,...)
-    if (id ~= GIL_ITEM_ID) then ready = true
-  end
+    if (id ~= GIL_ITEM_ID) then ready = true end
 end)
 
 windower.register_event('remove item', function(id,...)
-    if (id ~= GIL_ITEM_ID) then ready = true
-  end
+    if (id ~= GIL_ITEM_ID) then ready = true end
 end)
 
 windower.register_event('linkshell change', function(new,old)
-    if (old ~= new) then ready = true
-  end
+    if (old ~= new) then ready = true end
 end)
 
 windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
@@ -296,7 +294,7 @@ windower.register_event('keyboard', function(dik, down, _flags, _blocked)
 end)
 
 function refresh_inventory()
-    if (not refreshed and ready and inventory_loaded) then
+    if (ready and inventory_loaded) then
         update()
         ready = false
     elseif (not inventory_loaded) then
