@@ -35,6 +35,7 @@ config = require('config')
 images = require('images')
 texts = require('texts')
 res = require('resources')
+packets = require('packets')
 
 local CUTSCENE_STATUS_ID = 4
 local SCROLL_LOCK_KEY = 70
@@ -44,12 +45,13 @@ local EQUIPPED_ITEM_STATUS = 5
 local LINKSHELL_EQUIPPED_ITEM_STATUS = 19
 local BAZAAR_ITEM_STATUS = 25
 local EQUIPMENT_CHANGED_PACKET = 0x50
-local LINKSHELL_EQUIP_PACKET = 0xE0
-local INVENTORY_SIZE_CHANGED_PACKET = 0x1C
+local ITEM_UPDATE_PACKET = 0x20
 local INVENTORY_FINISH_PACKET = 0x1D
 local LOGIN_ZONE_PACKET = 0x0A
 local TREASURE_FIND_ITEM_PACKET = 0xD2
 local TREASURE_LOT_ITEM_PACKET = 0xD3
+local GIL_ITEM_ID = 0xFFFF
+local LINKSHELL_ACTIVE_PACKET_DATA = 19
 
 hideKey = SCROLL_LOCK_KEY
 is_hidden_by_cutscene = false
@@ -93,9 +95,9 @@ defaults.slotImage.mogWardrobe.visible = false
 defaults.slotImage.mogWardrobe.maxColumns = 5
 defaults.slotImage.tempInventory = {}
 defaults.slotImage.tempInventory.maxColumns = 1
-defaults.slotImage.tempInventory.visible = false
+defaults.slotImage.tempInventory.visible = true
 defaults.slotImage.treasury = {}
-defaults.slotImage.treasury.visible = false
+defaults.slotImage.treasury.visible = true
 defaults.slotImage.treasury.maxColumns = 1
 defaults.slotImage.status = {}
 defaults.slotImage.status.default = {}
@@ -230,6 +232,7 @@ local last_column = 1
 local items = {}
 local slot_images = {}
 local inventory_loaded = false
+local ready = false
 
 config.register(settings, function(settings)
     hideKey = settings.HideKey
@@ -245,7 +248,6 @@ end)
 
 windower.register_event('login',function()
     update()
-    hide()
 end)
 
 windower.register_event('logout', function(...)
@@ -254,14 +256,31 @@ windower.register_event('logout', function(...)
     clear()
 end)
 
-windower.register_event('incoming chunk',function(id,_org,_modi,_is_injected,_is_blocked)
+windower.register_event('add item', function(id,...)
+    if (id ~= GIL_ITEM_ID) then ready = true
+  end
+end)
+
+windower.register_event('remove item', function(id,...)
+    if (id ~= GIL_ITEM_ID) then ready = true
+  end
+end)
+
+windower.register_event('linkshell change', function(...)
+    ready = true
+end)
+
+windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
     if (id == LOGIN_ZONE_PACKET) then
         inventory_loaded = false
+    elseif (id == EQUIPMENT_CHANGED_PACKET) then
+        ready = true
+    elseif (id == ITEM_UPDATE_PACKET) then
+        ready_if_valid_packet(org)
     elseif (id == INVENTORY_FINISH_PACKET) then
-        update_if_ready()
-        initialize()
+        refresh_inventory()
     elseif (id == TREASURE_FIND_ITEM_PACKET or id == TREASURE_LOT_ITEM_PACKET) then
-        if settings.slotImage.treasury.visible then update_if_ready() end
+        update_treasury()
     end
 end)
 
@@ -274,26 +293,36 @@ windower.register_event('keyboard', function(dik, down, _flags, _blocked)
     toggle_display_if_hide_key_is_pressed(dik, down)
 end)
 
-function initialize()
-    if (not inventory_loaded) then
-        inventory_loaded = true
+function refresh_inventory()
+    if (not refreshed and ready and inventory_loaded) then
         update()
-        show()
+        ready = false
+    elseif (not inventory_loaded) then
+        initialize()
     end
 end
 
-function update_if_ready()
-    if (inventory_loaded) then
-        update()
-    end
+function initialize()
+    inventory_loaded = true
+    update()
+    if not is_hidden_by_key and not is_hidden_by_cutscene then show() end
+end
+
+function ready_if_valid_packet(packet_data)
+    local p = packets.parse('incoming',packet_data)
+    if (p.Status ~= LINKSHELL_ACTIVE_PACKET_DATA) then ready = true end
 end
 
 function update()
+    setup_indexes()
+    update_equipment()
+    update_items()
+end
+
+function setup_indexes()
     current_block = 0
     last_column = 1
     items = windower.ffxi.get_items()
-    update_equipment()
-    update_items()
 end
 
 function update_equipment()
@@ -319,20 +348,43 @@ function update_equipment()
 end
 
 function update_items()
-    update_bag(settings.slotImage.inventory,items.inventory,items.max_inventory,items.enabled_inventory)
-    update_bag(settings.slotImage.mogSafe,items.safe,items.max_safe,items.enabled_safe)
-    update_bag(settings.slotImage.mogSafe,items.safe2,items.max_safe2,items.enabled_safe2)
-    update_bag(settings.slotImage.mogStorage,items.storage,items.max_storage,items.enabled_storage)
-    update_bag(settings.slotImage.mogLocker,items.locker,items.max_locker,items.enabled_locker)
-    update_bag(settings.slotImage.mogSatchel,items.satchel,items.max_satchel,items.enabled_satchel)
-    update_bag(settings.slotImage.mogSack,items.sack,items.max_sack,items.enabled_sack)
-    update_bag(settings.slotImage.mogCase,items.case,items.max_case,items.enabled_case)
-    update_bag(settings.slotImage.mogWardrobe,items.wardrobe,items.max_wardrobe,items.enabled_wardrobe)
-    update_bag(settings.slotImage.mogWardrobe,items.wardrobe2,items.max_wardrobe2,items.enabled_wardrobe2)
-    update_bag(settings.slotImage.mogWardrobe,items.wardrobe3,items.max_wardrobe3,items.enabled_wardrobe3)
-    update_bag(settings.slotImage.mogWardrobe,items.wardrobe4,items.max_wardrobe4,items.enabled_wardrobe4)
-    update_temp_bag(settings.slotImage.tempInventory,items.temporary)
-    update_treasure_bag(settings.slotImage.treasury,items.treasure)
+    local s = settings.slotImage
+    update_bag(s.inventory,items.inventory,items.max_inventory,items.enabled_inventory)
+    update_bag(s.mogSafe,items.safe,items.max_safe,items.enabled_safe)
+    update_bag(s.mogSafe,items.safe2,items.max_safe2,items.enabled_safe2)
+    update_bag(s.mogStorage,items.storage,items.max_storage,items.enabled_storage)
+    update_bag(s.mogLocker,items.locker,items.max_locker,items.enabled_locker)
+    update_bag(s.mogSatchel,items.satchel,items.max_satchel,items.enabled_satchel)
+    update_bag(s.mogSack,items.sack,items.max_sack,items.enabled_sack)
+    update_bag(s.mogCase,items.case,items.max_case,items.enabled_case)
+    update_bag(s.mogWardrobe,items.wardrobe,items.max_wardrobe,items.enabled_wardrobe)
+    update_bag(s.mogWardrobe,items.wardrobe2,items.max_wardrobe2,items.enabled_wardrobe2)
+    update_bag(s.mogWardrobe,items.wardrobe3,items.max_wardrobe3,items.enabled_wardrobe3)
+    update_bag(s.mogWardrobe,items.wardrobe4,items.max_wardrobe4,items.enabled_wardrobe4)
+    update_temp_bag(s.tempInventory,items.temporary)
+    update_treasure_bag(s.treasury,items.treasure)
+end
+
+function update_treasury()
+    local s = settings.slotImage
+    if (inventory_loaded and s.treasury.visible) then
+        setup_indexes()
+        initialize_block_if_enabled(s.equipment.visible, true,s.equipment.maxColumns,MAX_EQUIPMENT_SIZE)
+        initialize_block_if_enabled(s.inventory.visible,items.enabled_inventory,s.inventory.maxColumns,items.max_inventory)
+        initialize_block_if_enabled(s.mogSafe.visible,items.enabled_safe,s.mogSafe.maxColumns,items.max_safe)
+        initialize_block_if_enabled(s.mogSafe.visible,items.enabled_safe2,s.mogSafe.maxColumns,items.max_safe2)
+        initialize_block_if_enabled(s.mogStorage.visible,items.enabled_storage,s.mogStorage.maxColumns,items.max_storage)
+        initialize_block_if_enabled(s.mogLocker.visible,items.enabled_locker,s.mogLocker.maxColumns,items.max_locker)
+        initialize_block_if_enabled(s.mogSatchel.visible,items.enabled_satchel,s.mogSatchel.maxColumns,items.max_satchel)
+        initialize_block_if_enabled(s.mogSack.visible,items.enabled_sack,s.mogSack.maxColumns,items.max_sack)
+        initialize_block_if_enabled(s.mogCase.visible,items.enabled_case,s.mogCase.maxColumns,items.max_case)
+        initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe,s.mogWardrobe.maxColumns,items.max_wardrobe)
+        initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe2,s.mogWardrobe.maxColumns,items.max_wardrobe2)
+        initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe3,s.mogWardrobe.maxColumns,items.max_wardrobe3)
+        initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe4,s.mogWardrobe.maxColumns,items.max_wardrobe4)
+        initialize_block_if_enabled(s.tempInventory.visible,true,s.tempInventory.maxColumns,#items.temporary)
+        update_treasure_bag(s.treasury,items.treasure)
+    end
 end
 
 function update_bag(config, bag, max, enabled)
@@ -347,7 +399,7 @@ function update_temp_bag(config, bag)
         initialize_block()
         for key=1,#bag,1 do
             if bag[key].count > 0 then
-                print_slot(settings.slotImage.status.tempItem,config.maxColumns,#bag+1)
+                print_slot(settings.slotImage.status.tempItem,config.maxColumns,0)
             else
                 if slot_images[current_block][key] ~= nil then
                     slot_images[current_block][key].background:alpha(0)
@@ -366,8 +418,21 @@ function update_treasure_bag(config,bag)
             slot_images[current_block][k].box:alpha(0)
         end
         for _k, _v in pairs(bag) do
-            print_slot(settings.slotImage.status.tempItem,config.maxColumns,#bag+1)
+            print_slot(settings.slotImage.status.tempItem,config.maxColumns,0)
         end
+    end
+end
+
+function count_treasury()
+    local count = 0
+    for _k, _v in pairs(items.treasure) do count = count + 1 end
+    return count
+end
+
+function initialize_block_if_enabled(visible,enabled,max_columns,last_index)
+    if visible and enabled then
+        initialize_block()
+        update_indexes(max_columns,last_index)
     end
 end
 
@@ -417,20 +482,21 @@ function sort_table(bag)
 end
 
 function print_item(config, item, last_index)
+    local s = settings.slotImage
     if (item.status == DEFAULT_ITEM_STATUS) then
         if (item.count == res.items[item.id].stack) then
-            print_slot(settings.slotImage.status.fullStack,config.maxColumns,last_index)
+            print_slot(s.status.fullStack,config.maxColumns,last_index)
         else
-            print_slot(settings.slotImage.status.default,config.maxColumns,last_index)
+            print_slot(s.status.default,config.maxColumns,last_index)
         end
     elseif (item.status == EQUIPPED_ITEM_STATUS) then
-        print_slot(settings.slotImage.status.equipped,config.maxColumns,last_index)
+        print_slot(s.status.equipped,config.maxColumns,last_index)
     elseif (item.status == LINKSHELL_EQUIPPED_ITEM_STATUS) then
-        print_slot(settings.slotImage.status.linkshellEquipped,config.maxColumns,last_index)
+        print_slot(s.status.linkshellEquipped,config.maxColumns,last_index)
     elseif (item.status == BAZAAR_ITEM_STATUS) then
-        print_slot(settings.slotImage.status.bazaar,config.maxColumns,last_index)
+        print_slot(s.status.bazaar,config.maxColumns,last_index)
     else
-        print_slot(settings.slotImage.status.empty,config.maxColumns,last_index)
+        print_slot(s.status.empty,config.maxColumns,last_index)
     end
 end
 
@@ -446,34 +512,37 @@ end
 
 function print_slot_background(slot_color, max_columns, last_index)
     local slot_image = slot_images[current_block][current_slot]
+    local s = settings.slotImage
     if slot_image.background == nil then
-        slot_image.background = images.new(settings.slotImage.background)
+        slot_image.background = images.new(s.background)
         slot_image.background:pos(current_x,current_y)
     end
-    slot_image.background:width(settings.slotImage.background.size.width)
-    slot_image.background:height(settings.slotImage.background.size.height)
+    slot_image.background:width(s.background.size.width)
+    slot_image.background:height(s.background.size.height)
     slot_image.background:alpha(slot_color.alpha)
     slot_image.background:color(slot_color.red,slot_color.green,slot_color.blue)
 end
 
 function print_slot_box(slot_color, max_columns, last_index)
     local slot_image = slot_images[current_block][current_slot]
+    local s = settings.slotImage
     if slot_image.box == nil then
-        slot_image.box = images.new(settings.slotImage.box)
+        slot_image.box = images.new(s.box)
         slot_image.box:pos(current_x,current_y)
     end
-    slot_image.box:width(settings.slotImage.box.size.width)
-    slot_image.box:height(settings.slotImage.box.size.height)
+    slot_image.box:width(s.box.size.width)
+    slot_image.box:height(s.box.size.height)
     slot_image.box:color(slot_color.red,slot_color.green,slot_color.blue)
     slot_image.box:alpha(slot_color.alpha)
 end
 
 function update_coordinates()
+    local s = settings.slotImage
     current_x = xRes + xBase +
-        ((current_column - 1) * settings.slotImage.spacing) +
-        ((current_block - 1) * settings.slotImage.blockSpacing) +
-        ((last_column - 1) * settings.slotImage.spacing)
-    current_y = yRes + yBase - ((current_row - 1) * settings.slotImage.spacing)
+        ((current_column - 1) * s.spacing) +
+        ((current_block - 1) * s.blockSpacing) +
+        ((last_column - 1) * s.spacing)
+    current_y = yRes + yBase - ((current_row - 1) * s.spacing)
 end
 
 function update_indexes(max_columns, last_index)
@@ -519,7 +588,7 @@ function toggle_display_if_cutscene(is_cutscene_playing)
     if (is_cutscene_playing) and (not is_hidden_by_key) then
         is_hidden_by_cutscene = true
         hide()
-    elseif inventory_loaded and (not is_cutscene_playing) and (not is_hidden_by_key) then
+    elseif (not is_cutscene_playing) and (not is_hidden_by_key) then
         is_hidden_by_cutscene = false
         show()
     end
