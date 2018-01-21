@@ -34,6 +34,7 @@ _addon.language = 'English'
 config = require('config')
 images = require('images')
 texts = require('texts')
+packets = require('packets')
 
 local GIL_ITEM_ID = 0xFFFF
 local CUTSCENE_STATUS_ID = 4
@@ -41,10 +42,11 @@ local SCROLL_LOCK_KEY = 70
 local INVENTORY_FINISH_PACKET = 0x1D
 local TREASURE_FIND_ITEM_PACKET = 0xD2
 local LOGIN_ZONE_PACKET = 0x0A
+local ITEM_UPDATE_PACKET = 0x20
 
-hideKey = SCROLL_LOCK_KEY
-is_hidden_by_cutscene = false
-is_hidden_by_key = false
+local hideKey = SCROLL_LOCK_KEY
+local is_hidden_by_cutscene = false
+local is_hidden_by_key = false
 
 defaults = {}
 defaults.hideKey = SCROLL_LOCK_KEY
@@ -100,8 +102,10 @@ settings.gilImage.repeatable = {}
 settings.gilImage.repeatable.x = 1
 settings.gilImage.repeatable.y = 1
 
-gil_image = images.new(settings.gilImage)
-gil_text = texts.new(settings.gilText)
+local gil_image = images.new(settings.gilImage)
+local gil_text = texts.new(settings.gilText)
+local inventory_loaded = false
+local ready = false
 
 config.register(settings, function(settings)
     hideKey = settings.hideKey
@@ -119,7 +123,7 @@ windower.register_event('load',function()
 end)
 
 windower.register_event('login',function()
-    inventory_loaded = false
+    gil_text:text('Loading...')
 end)
 
 windower.register_event('logout', function(...)
@@ -127,21 +131,15 @@ windower.register_event('logout', function(...)
     hide()
 end)
 
-windower.register_event('add item', function(_bag, _slot, id, _count)
-    update_gil_if_item_id_matches(id)
-end)
-
-windower.register_event('remove item', function(_bag, _slot, id, _count)
-    update_gil_if_item_id_matches(id)
-end)
-
-windower.register_event('incoming chunk',function(id,_org,_modi,_is_injected,_is_blocked)
+windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
     if (id == LOGIN_ZONE_PACKET) then
-        update_gil()
-    elseif (id == TREASURE_FIND_ITEM_PACKET) then
         inventory_loaded = false
+    elseif (id == TREASURE_FIND_ITEM_PACKET) then
+        ready_if_valid_treasure_packet(org)
+    elseif (id == ITEM_UPDATE_PACKET) then
+        update_if_valid_item_packet(org)
     elseif (id == INVENTORY_FINISH_PACKET) then
-        initialize()
+        refresh_gil()
     end
 end)
 
@@ -154,25 +152,36 @@ windower.register_event('keyboard', function(dik, down, _flags, _blocked)
     toggle_display_if_hide_key_is_pressed(dik, down)
 end)
 
-function initialize()
-    if (not inventory_loaded) then
-        inventory_loaded = true
+function ready_if_valid_treasure_packet(packet_data)
+    local p = packets.parse('incoming',packet_data)
+    if (p.Item == 0x0 and p.Count >= 0) then ready = true end
+end
+
+function update_if_valid_item_packet(packet_data)
+    local p = packets.parse('incoming',packet_data)
+    if (p.Item == GIL_ITEM_ID and p.Count >= 0) then
         update_gil()
-        show()
     end
 end
 
-function update_gil_if_item_id_matches(id)
-    if (id == GIL_ITEM_ID) then
+function refresh_gil()
+    if (ready and inventory_loaded) then
         update_gil()
+        ready = false
+    elseif (not inventory_loaded) then
+        initialize()
     end
+end
+
+function initialize()
+    inventory_loaded = true
+    update_gil()
+    if not is_hidden_by_key and not is_hidden_by_cutscene then show() end
 end
 
 function update_gil()
-    if (inventory_loaded) then
-        local gil = windower.ffxi.get_items('gil')
-        gil_text:text(comma_value(gil))
-    end
+    local gil = windower.ffxi.get_items('gil')
+    gil_text:text(comma_value(gil))
 end
 
 function show()
@@ -204,7 +213,7 @@ function toggle_display_if_cutscene(is_cutscene_playing)
     if (is_cutscene_playing) and (not is_hidden_by_key) then
         is_hidden_by_cutscene = true
         hide()
-    elseif inventory_loaded and (not is_cutscene_playing) and (not is_hidden_by_key) then
+    elseif (not is_cutscene_playing) and (not is_hidden_by_key) then
         is_hidden_by_cutscene = false
         show()
     end
