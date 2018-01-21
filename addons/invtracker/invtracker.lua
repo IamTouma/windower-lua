@@ -233,6 +233,7 @@ local items = {}
 local slot_images = {}
 local inventory_loaded = false
 local ready = false
+local last_treasure_count = 0
 
 config.register(settings, function(settings)
     hideKey = settings.HideKey
@@ -266,8 +267,9 @@ windower.register_event('remove item', function(id,...)
   end
 end)
 
-windower.register_event('linkshell change', function(...)
-    ready = true
+windower.register_event('linkshell change', function(new,old)
+    if (old ~= new) then ready = true
+  end
 end)
 
 windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
@@ -382,7 +384,7 @@ function update_treasury()
         initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe2,s.mogWardrobe.maxColumns,items.max_wardrobe2)
         initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe3,s.mogWardrobe.maxColumns,items.max_wardrobe3)
         initialize_block_if_enabled(s.mogWardrobe.visible,items.enabled_wardrobe4,s.mogWardrobe.maxColumns,items.max_wardrobe4)
-        initialize_block_if_enabled(s.tempInventory.visible,true,s.tempInventory.maxColumns,#items.temporary)
+        initialize_block_if_enabled(s.tempInventory.visible,true,s.tempInventory.maxColumns,items.temporary.max)
         update_treasure_bag(s.treasury,items.treasure)
     end
 end
@@ -397,9 +399,9 @@ end
 function update_temp_bag(config, bag)
     if (config.visible and bag.enabled) then
         initialize_block()
-        for key=1,#bag,1 do
+        for key=1,bag.max,1 do
             if bag[key].count > 0 then
-                print_slot(settings.slotImage.status.tempItem,config.maxColumns,0)
+                print_slot(settings.slotImage.status.tempItem,config.maxColumns,bag.max)
             else
                 if slot_images[current_block][key] ~= nil then
                     slot_images[current_block][key].background:alpha(0)
@@ -412,18 +414,22 @@ end
 
 function update_treasure_bag(config,bag)
     if (config.visible) then
-        initialize_block()
-        for k, _v in ipairs(slot_images[current_block]) do
-            slot_images[current_block][k].background:alpha(0)
-            slot_images[current_block][k].box:alpha(0)
-        end
-        for _k, _v in pairs(bag) do
-            print_slot(settings.slotImage.status.tempItem,config.maxColumns,0)
+        local treasure_count = count_treasure()
+        if (treasure_count ~= last_treasure_count) then
+            initialize_block()
+            for k, _v in ipairs(slot_images[current_block]) do
+                slot_images[current_block][k].background:alpha(0)
+                slot_images[current_block][k].box:alpha(0)
+            end
+            for _k, _v in pairs(bag) do
+                print_slot(settings.slotImage.status.tempItem,config.maxColumns,80)
+            end
+            last_treasure_count = treasure_count
         end
     end
 end
 
-function count_treasury()
+function count_treasure()
     local count = 0
     for _k, _v in pairs(items.treasure) do count = count + 1 end
     return count
@@ -432,6 +438,8 @@ end
 function initialize_block_if_enabled(visible,enabled,max_columns,last_index)
     if visible and enabled then
         initialize_block()
+        current_slot = last_index
+        current_column = max_columns
         update_indexes(max_columns,last_index)
     end
 end
