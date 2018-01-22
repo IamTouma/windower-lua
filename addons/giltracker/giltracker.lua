@@ -36,13 +36,14 @@ images = require('images')
 texts = require('texts')
 packets = require('packets')
 
-local GIL_ITEM_ID = 0xFFFF
+local GIL_ITEM_ID = 65535
 local CUTSCENE_STATUS_ID = 4
 local SCROLL_LOCK_KEY = 70
 local INVENTORY_FINISH_PACKET = 0x1D
 local TREASURE_FIND_ITEM_PACKET = 0xD2
 local LOGIN_ZONE_PACKET = 0x0A
 local ITEM_UPDATE_PACKET = 0x20
+local ITEM_MODIFY_PACKET = 0x1F
 
 local hideKey = SCROLL_LOCK_KEY
 local is_hidden_by_cutscene = false
@@ -131,6 +132,14 @@ windower.register_event('logout', function(...)
     hide()
 end)
 
+windower.register_event('add item', function(_bag,_index,id,...)
+    if (id == GIL_ITEM_ID) then ready = true end
+end)
+
+windower.register_event('remove item', function(_bag,_index,id,...)
+    if (id == GIL_ITEM_ID) then ready = true end
+end)
+
 windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
     if (id == LOGIN_ZONE_PACKET) then
         inventory_loaded = false
@@ -140,6 +149,8 @@ windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_
         update_if_valid_item_packet(org)
     elseif (id == INVENTORY_FINISH_PACKET) then
         refresh_gil()
+    elseif (id == ITEM_MODIFY_PACKET) then
+        update_if_valid_item_packet(org)
     end
 end)
 
@@ -154,7 +165,7 @@ end)
 
 function ready_if_valid_treasure_packet(packet_data)
     local p = packets.parse('incoming',packet_data)
-    if (p.Item == 0x0 and p.Count >= 0) then ready = true end
+    if (p.Count > 0) then ready = true end
 end
 
 function update_if_valid_item_packet(packet_data)
@@ -198,9 +209,7 @@ function comma_value(amount)
     local formatted = tostring(amount)
     while true do
         formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
-        if (k==0) then
-            break
-        end
+        if (k==0) then break end
     end
     return formatted
 end
