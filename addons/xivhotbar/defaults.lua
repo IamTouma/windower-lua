@@ -30,7 +30,7 @@ local defaults = {}
 
 defaults.Hotbar = {}
 --defaults.Hotbar.Number = 3
-defaults.Hotbar.HideEmptySlots = false
+defaults.Hotbar.HideEmptySlots = true
 defaults.Hotbar.HideActionName = false
 defaults.Hotbar.HideActionCost = false
 defaults.Hotbar.HideActionElement = true
@@ -52,7 +52,7 @@ defaults.Style = {}
 defaults.Style.SlotAlpha = 200
 defaults.Style.SlotSpacing = 12
 defaults.Style.HotbarSpacing = 56
-defaults.Style.OffsetX = -295
+defaults.Style.OffsetX = -313
 defaults.Style.OffsetY = -370
 
 defaults.Color = {}

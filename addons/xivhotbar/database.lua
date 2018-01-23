@@ -28,8 +28,8 @@
 
 local database = {}
 
-local abilities_file = file.new('/resources/abils.xml')
-local spells_file = file.new('/resources/spells.xml')
+local abilities_file = file.new('../../plugins/resources/abils.xml')
+local spells_file = file.new('../../plugins/resources/spells.xml')
 
 database.spells = {}
 database.abilities = {}
@@ -45,7 +45,6 @@ end
 -- parse abilities xml
 function database:parse_abilities()
     local contents = xml.read(abilities_file)
-
     for key, abil in ipairs(contents.children) do
         local new_abil = {}
 

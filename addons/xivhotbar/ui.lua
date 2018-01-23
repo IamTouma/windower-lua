@@ -340,12 +340,12 @@ function ui:load_action(hotbar, slot, action, player_vitals)
         -- if its magic, look for it in spells
         if action.type == 'ma' and database.spells[(action.action):lower()] ~= nil then
             skill = database.spells[(action.action):lower()]
-            self.hotbars[hotbar].slot_icon[slot]:path(windower.addon_path .. '/images/icons/spells/' .. (string.format("%05d", skill.icon)) .. '.png')
+            self.hotbars[hotbar].slot_icon[slot]:path(windower.addon_path .. '../../plugins/icons/spells/' .. (string.format("%05d", skill.icon)) .. '.png')
         elseif (action.type == 'ja' or action.type == 'ws') and database.abilities[(action.action):lower()] ~= nil then
             skill = database.abilities[(action.action):lower()]
 
             if action.type == 'ja' then
-                self.hotbars[hotbar].slot_icon[slot]:path(windower.addon_path .. '/images/icons/abilities/' .. string.format("%05d", skill.icon) .. '.png')
+                self.hotbars[hotbar].slot_icon[slot]:path(windower.addon_path .. '../../plugins/icons/abilities/' .. string.format("%05d", skill.icon) .. '.png')
             else
                 self.hotbars[hotbar].slot_icon[slot]:path(windower.addon_path .. '/images/icons/weapons/sword.png')
                 skill.tpcost = '1000'

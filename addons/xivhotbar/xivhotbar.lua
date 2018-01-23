@@ -60,8 +60,11 @@ local player = require('player')
 local ui = require('ui')
 local xivhotbar = require('variables')
 
+local LOGIN_ZONE_PACKET = 0x0A
+local ZONE_OUT_PACKET = 0x0B
 local is_hidden_by_key = false
 local is_hidden_by_cutscene = false
+local is_hidden_by_zoning = false
 
 -----------------------------
 -- Main
@@ -437,12 +440,24 @@ windower.register_event('job change',function(main_job, main_job_level, sub_job,
     reload_hotbar()
 end)
 
+windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
+    if (id == LOGIN_ZONE_PACKET) then
+        is_hidden_by_zoning = false
+        ui:show(player.hotbar, player.hotbar_settings.active_environment)
+    elseif (id == ZONE_OUT_PACKET) then
+        is_hidden_by_zoning = true
+        ui:hide()
+    end
+end)
+
 windower.register_event('keyboard', function(dik, flags, blocked)
-  if dik == hideKey and flags == true and (is_hidden_by_key == true) and is_hidden_by_cutscene == false then
-    is_hidden_by_key = false
-    ui:show(player.hotbar, player.hotbar_settings.active_environment)
-  elseif dik == hideKey and flags == true and (is_hidden_by_key == false) and is_hidden_by_cutscene == false then
-    is_hidden_by_key = true
-    ui:hide()
+  if not is_hidden_by_zoning then
+      if dik == hideKey and flags == true and (is_hidden_by_key == true) and is_hidden_by_cutscene == false then
+        is_hidden_by_key = false
+        ui:show(player.hotbar, player.hotbar_settings.active_environment)
+      elseif dik == hideKey and flags == true and (is_hidden_by_key == false) and is_hidden_by_cutscene == false then
+        is_hidden_by_key = true
+        ui:hide()
+      end
   end
 end)
