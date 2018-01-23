@@ -86,7 +86,10 @@ chunk_update = false
 
 local is_hidden_by_key = false
 local is_hidden_by_cutscene = false
+local is_hidden_by_zoning = false
 local hideKey = settings.HideKey
+local LOGIN_ZONE_PACKET = 0x0A
+local ZONE_OUT_PACKET = 0x0B
 
 windower.register_event('load',function()
     if windower.ffxi.get_info().logged_in then
@@ -136,6 +139,18 @@ windower.register_event('incoming chunk',function(id,org,modi,is_injected,is_blo
             xp.total = packet_table['Required EXP']
             xp.tnl = xp.total - xp.current
             chunk_update = true
+        elseif id == LOGIN_ZONE_PACKET then
+          is_hidden_by_zoning = false
+          background_image:show()
+          foreground_image:show()
+          exp_text:show()
+          mog_house()
+        elseif id == ZONE_OUT_PACKET then
+          is_hidden_by_zoning = true
+          background_image:hide()
+          foreground_image:hide()
+          rested_bonus_image:hide()
+          exp_text:hide()
         end
     end
 end)
@@ -185,18 +200,20 @@ windower.register_event('status change', function(new_status_id)
 end)
 
 windower.register_event('keyboard', function(dik, flags, blocked)
-  if dik == hideKey and flags == true and (is_hidden_by_key == true) and (is_hidden_by_cutscene == false) then
-    is_hidden_by_key = false
-    background_image:show()
-    foreground_image:show()
-    exp_text:show()
-    mog_house()
-  elseif dik == hideKey and flags == true and (is_hidden_by_key == false) and (is_hidden_by_cutscene == false) then
-    is_hidden_by_key = true
-    background_image:hide()
-    foreground_image:hide()
-    rested_bonus_image:hide()
-    exp_text:hide()
+  if not is_hidden_by_zoning then
+    if dik == hideKey and flags == true and (is_hidden_by_key == true) and (is_hidden_by_cutscene == false) then
+      is_hidden_by_key = false
+      background_image:show()
+      foreground_image:show()
+      exp_text:show()
+      mog_house()
+    elseif dik == hideKey and flags == true and (is_hidden_by_key == false) and (is_hidden_by_cutscene == false) then
+      is_hidden_by_key = true
+      background_image:hide()
+      foreground_image:hide()
+      rested_bonus_image:hide()
+      exp_text:hide()
+    end
   end
 end)
 

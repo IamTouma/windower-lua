@@ -3,20 +3,6 @@ This addon displays a grid detailing empty and filled inventory slots, similar t
 
 ![Imgur](https://i.imgur.com/PgiMxRZ.png)
 
-## How to install:
-1. Download the repository [here](https://github.com/azamorapl/Lua/archive/personal.zip)
-2. Extract the **_invtracker_** folder to your **_Windower4/addons_** folder
-
-## How to enable it in-game:
-1. Login to your character in FFXI
-2. Press insert to access the windower console
-3. Type ``` lua l invtracker ```
-
-## How to have windower load it automatically:
-1. Go to your windower folder
-2. Open the file **_Windower4/scripts/init.txt_**
-3. Add the following line to the end of the file ``` lua l invtracker ```
-
 ## How to edit the settings
 1. Login to your character in FFXI
 2. Edit the addon settings file: **_Windower4\addons\invtracker\data\settings.xml_**

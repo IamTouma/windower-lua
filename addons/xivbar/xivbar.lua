@@ -51,8 +51,11 @@ local ui = require('ui')
 local player = require('player')
 local xivbar = require('variables')
 
+local LOGIN_ZONE_PACKET = 0x0A
+local ZONE_OUT_PACKET = 0x0B
 local is_hidden_by_key = false
 local is_hidden_by_cutscene = false
+local is_hidden_by_zoning = false
 hideKey = settings.HideKey
 
 -- initialize addon
@@ -229,12 +232,25 @@ windower.register_event('status change', function(new_status_id)
     end
 end)
 
+
+windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
+    if (id == LOGIN_ZONE_PACKET) then
+        is_hidden_by_zoning = false
+        show()
+    elseif (id == ZONE_OUT_PACKET) then
+        is_hidden_by_zoning = true
+        hide()
+    end
+end)
+
 windower.register_event('keyboard', function(dik, flags, blocked)
-  if (dik == hideKey) and (flags == true) and (is_hidden_by_key == true) and (is_hidden_by_cutscene == false) then
-    is_hidden_by_key = false
-    show()
-  elseif (dik == hideKey) and (flags == true) and (is_hidden_by_key == false) and (is_hidden_by_cutscene == false) then
-    is_hidden_by_key = true
-    hide()
-  end
+    if not is_hidden_by_zoning then
+      if (dik == hideKey) and (flags == true) and (is_hidden_by_key == true) and (is_hidden_by_cutscene == false) then
+        is_hidden_by_key = false
+        show()
+      elseif (dik == hideKey) and (flags == true) and (is_hidden_by_key == false) and (is_hidden_by_cutscene == false) then
+        is_hidden_by_key = true
+        hide()
+      end
+    end
 end)

@@ -59,7 +59,7 @@ defaults.zoneName.flags.italic = false
 defaults.zoneName.padding = 0
 defaults.zoneName.text = {}
 defaults.zoneName.text.size = 34
-defaults.zoneName.text.centerAdjust = 1.51
+defaults.zoneName.text.centerAdjust = 1.62
 defaults.zoneName.text.font = 'Century Schoolbook'
 defaults.zoneName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
 defaults.zoneName.text.alpha = 85
@@ -75,6 +75,7 @@ defaults.zoneName.text.stroke.blue = 38
 defaults.zoneName.text.visible = true
 defaults.zoneName.replaceAbbreviations = true
 defaults.zoneName.format = '%s'
+defaults.zoneName.tildeExtraWidth = 18
 defaults.regionName = {}
 defaults.regionName.pos = {}
 defaults.regionName.pos.x = 0
@@ -109,6 +110,7 @@ defaults.regionName.text.stroke.blue = 38
 defaults.regionName.text.visible = true
 defaults.regionName.format = '- %s -'
 defaults.regionName.replaceNationNames = true
+defaults.regionName.tildeExtraWidth = 13
 defaults.centered = true
 defaults.fadeTime = 1
 defaults.displayTime = 3
@@ -224,14 +226,26 @@ function center_text()
         local zone_text_width = (string.len(zone_name) * (settings.zoneName.text.size/2))
         local region_text_width = (string.len(region_name) * (settings.regionName.text.size/2))
         zone_text:pos(
-            (xRes/2) - (zone_text_width/2*settings.zoneName.text.centerAdjust)
+            (xRes/2)
+                - (zone_text_width/2*settings.zoneName.text.centerAdjust)
+                + calculate_extra(zone_name,settings.zoneName.tildeExtraWidth)
             ,(yRes/2) - (settings.zoneName.text.size * 2)
         )
         region_text:pos(
-            (xRes/2) - (region_text_width/2*settings.regionName.text.centerAdjust)
+            (xRes/2)
+                - (region_text_width/2*settings.regionName.text.centerAdjust)
+                + calculate_extra(region_name,settings.regionName.tildeExtraWidth)
             ,zone_text:pos_y() - (settings.regionName.text.size * 2)
         )
     end
+end
+
+function calculate_extra(text,tilde_extra)
+    local extra_width = 0
+    if string.match(text,'\'') then extra_width = extra_width + tilde_extra end
+    if string.match(text,'i') then extra_width = extra_width + tilde_extra end
+    if string.match(text,'l') then extra_width = extra_width + tilde_extra end
+    return extra_width
 end
 
 function setup_text(textbox,text)

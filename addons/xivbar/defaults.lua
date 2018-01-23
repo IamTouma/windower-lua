@@ -29,7 +29,7 @@
 local defaults = {}
 
 defaults.Bars = {}
-defaults.Bars.OffsetX = -290
+defaults.Bars.OffsetX = -310
 defaults.Bars.OffsetY = -370
 
 defaults.Theme = {}

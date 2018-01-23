@@ -49,6 +49,7 @@ local BAZAAR_PRICE_PACKET = 0x10A
 local EQUIPSET_CHANGED_PACKET = 0x051
 local INVENTORY_FINISH_PACKET = 0x1D
 local LOGIN_ZONE_PACKET = 0x0A
+local ZONE_OUT_PACKET = 0x0B
 local TREASURE_FIND_ITEM_PACKET = 0xD2
 local TREASURE_LOT_ITEM_PACKET = 0xD3
 local EQUIP_LINKSHELL_PACKET = 0xC4
@@ -59,6 +60,7 @@ local NO_ITEM_ID = 0
 local hideKey = SCROLL_LOCK_KEY
 local is_hidden_by_cutscene = false
 local is_hidden_by_key = false
+local is_hidden_by_zoning = false
 
 defaults = {}
 defaults.HideKey = SCROLL_LOCK_KEY
@@ -256,7 +258,6 @@ end)
 
 windower.register_event('login',function()
     update_all()
-    hide()
 end)
 
 windower.register_event('logout', function(...)
@@ -283,6 +284,8 @@ end)
 windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_blocked)
     if (id == LOGIN_ZONE_PACKET) then
         inventory_loaded = false
+        is_hidden_by_zoning = false
+        show()
     elseif (id == INVENTORY_FINISH_PACKET) then
         update()
     elseif (id == TREASURE_FIND_ITEM_PACKET) then
@@ -291,6 +294,9 @@ windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_
         update_treasure_only()
     elseif (id == INVENTORY_SIZE_PACKET) then
         update_if_different_size(org)
+    elseif (id == ZONE_OUT_PACKET) then
+        is_hidden_by_zoning = true
+        hide()
     end
 end)
 
@@ -669,21 +675,25 @@ function is_cutscene(status_id)
 end
 
 function toggle_display_if_cutscene(is_cutscene_playing)
-    if (is_cutscene_playing) and (not is_hidden_by_key) then
-        is_hidden_by_cutscene = true
-        hide()
-    elseif (not is_cutscene_playing) and (not is_hidden_by_key) then
-        is_hidden_by_cutscene = false
-        show()
+    if not is_hidden_by_zoning then
+        if (is_cutscene_playing) and (not is_hidden_by_key) then
+            is_hidden_by_cutscene = true
+            hide()
+        elseif (not is_cutscene_playing) and (not is_hidden_by_key) then
+            is_hidden_by_cutscene = false
+            show()
+        end
     end
 end
 
 function toggle_display_if_hide_key_is_pressed(key_pressed, key_down)
-    if (key_pressed == hideKey) and (key_down) and (is_hidden_by_key) and (not is_hidden_by_cutscene) then
-        is_hidden_by_key = false
-        show()
-    elseif (key_pressed == hideKey) and (key_down) and (not is_hidden_by_key) and (not is_hidden_by_cutscene) then
-        is_hidden_by_key = true
-        hide()
+    if not is_hidden_by_zoning then
+        if (key_pressed == hideKey) and (key_down) and (is_hidden_by_key) and (not is_hidden_by_cutscene) then
+            is_hidden_by_key = false
+            show()
+        elseif (key_pressed == hideKey) and (key_down) and (not is_hidden_by_key) and (not is_hidden_by_cutscene) then
+            is_hidden_by_key = true
+            hide()
+        end
     end
 end
