@@ -59,7 +59,7 @@ defaults.zoneName.flags.italic = false
 defaults.zoneName.padding = 0
 defaults.zoneName.text = {}
 defaults.zoneName.text.size = 34
-defaults.zoneName.text.centerAdjust = 1.62
+defaults.zoneName.text.centerAdjust = 1.61
 defaults.zoneName.text.font = 'Century Schoolbook'
 defaults.zoneName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
 defaults.zoneName.text.alpha = 85
@@ -75,7 +75,7 @@ defaults.zoneName.text.stroke.blue = 38
 defaults.zoneName.text.visible = true
 defaults.zoneName.replaceAbbreviations = true
 defaults.zoneName.format = '%s'
-defaults.zoneName.tildeExtraWidth = 18
+defaults.zoneName.tildeExtraWidth = 4
 defaults.regionName = {}
 defaults.regionName.pos = {}
 defaults.regionName.pos.x = 0
@@ -94,7 +94,7 @@ defaults.regionName.flags.italic = false
 defaults.regionName.padding = 0
 defaults.regionName.text = {}
 defaults.regionName.text.size = 18
-defaults.regionName.text.centerAdjust = 1.3
+defaults.regionName.text.centerAdjust = 1.4
 defaults.regionName.text.font = 'Century Schoolbook'
 defaults.regionName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
 defaults.regionName.text.alpha = 85
@@ -110,7 +110,7 @@ defaults.regionName.text.stroke.blue = 38
 defaults.regionName.text.visible = true
 defaults.regionName.format = '- %s -'
 defaults.regionName.replaceNationNames = true
-defaults.regionName.tildeExtraWidth = 13
+defaults.regionName.tildeExtraWidth = 3
 defaults.centered = true
 defaults.fadeTime = 1
 defaults.displayTime = 3
@@ -242,10 +242,16 @@ end
 
 function calculate_extra(text,tilde_extra)
     local extra_width = 0
-    if string.match(text,'\'') then extra_width = extra_width + tilde_extra end
-    if string.match(text,'i') then extra_width = extra_width + tilde_extra end
-    if string.match(text,'l') then extra_width = extra_width + tilde_extra end
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'%\'')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'i')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'t')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'l')
     return extra_width
+end
+
+function add_width_per_occurrence(text,tilde_extra,char)
+  local _, count = string.gsub(text, char, '')
+  return tilde_extra * count
 end
 
 function setup_text(textbox,text)
