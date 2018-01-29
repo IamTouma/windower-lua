@@ -59,7 +59,7 @@ defaults.zoneName.flags.italic = false
 defaults.zoneName.padding = 0
 defaults.zoneName.text = {}
 defaults.zoneName.text.size = 34
-defaults.zoneName.text.centerAdjust = 1.61
+defaults.zoneName.text.centerAdjust = 1.6
 defaults.zoneName.text.font = 'Century Schoolbook'
 defaults.zoneName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
 defaults.zoneName.text.alpha = 85
@@ -73,9 +73,9 @@ defaults.zoneName.text.stroke.red = 51
 defaults.zoneName.text.stroke.green = 47
 defaults.zoneName.text.stroke.blue = 38
 defaults.zoneName.text.visible = true
-defaults.zoneName.replaceAbbreviations = true
+defaults.zoneName.replaceAbbreviations = false
 defaults.zoneName.format = '%s'
-defaults.zoneName.tildeExtraWidth = 4
+defaults.zoneName.tildeExtraWidth = 7
 defaults.regionName = {}
 defaults.regionName.pos = {}
 defaults.regionName.pos.x = 0
@@ -110,10 +110,10 @@ defaults.regionName.text.stroke.blue = 38
 defaults.regionName.text.visible = true
 defaults.regionName.format = '- %s -'
 defaults.regionName.replaceNationNames = true
-defaults.regionName.tildeExtraWidth = 3
+defaults.regionName.tildeExtraWidth = 4
 defaults.centered = true
 defaults.fadeTime = 1
-defaults.displayTime = 3
+defaults.displayTime = 5
 defaults.waitTime = 2
 
 local settings = config.load(defaults)
@@ -131,17 +131,21 @@ config.register(settings, function(settings)
     xRes = windower_settings.ui_x_res
     yRes = windower_settings.ui_y_res
     local fade_millis = settings.fadeTime * 25
-    zone_fade_step = settings.zoneName.text.alpha / fade_millis
-    zone_stroke_fade_step = settings.zoneName.text.stroke.alpha / fade_millis
-    region_fade_step = settings.regionName.text.alpha / fade_millis
-    region_stroke_fade_step = settings.zoneName.text.stroke.alpha / fade_millis
+    zone_fade_step = math.ceil(settings.zoneName.text.alpha / fade_millis)
+    zone_stroke_fade_step = math.ceil(settings.zoneName.text.stroke.alpha / fade_millis)
+    region_fade_step = math.ceil(settings.regionName.text.alpha / fade_millis)
+    region_stroke_fade_step = math.ceil(settings.zoneName.text.stroke.alpha / fade_millis)
 end)
 
-windower.register_event('addon command',function(command, ...)
+windower.register_event('addon command',function(command, regionName, zoneName)
     if command == 'd' then
         start_display()
+    elseif command == 'f' then
+        region_name = string.format(settings.regionName.format,regionName)
+        zone_name = string.format(settings.zoneName.format,zoneName)
+        ready_display()
     else
-        windower.add_to_chat('8','zonename: enter \'d\' as an argument to test.')
+        windower.add_to_chat('8','zonename:\n\'d\': displays the current zone name.\n\'f\' <regionName> <zoneName>: displays the provided arguments..')
     end
 end)
 
@@ -159,12 +163,16 @@ function start_display()
     info = windower.ffxi.get_info()
     if not info.mog_house then
         setup_names(info.zone)
-        setup_text(zone_text,zone_name)
-        setup_text(region_text,region_name)
-        center_text()
-        ready = true
-        last_update = os.clock()
+        ready_display()
     end
+end
+
+function ready_display()
+    setup_text(zone_text,zone_name)
+    setup_text(region_text,region_name)
+    center_text()
+    ready = true
+    last_update = os.clock()
 end
 
 function setup_names(zone_id)
@@ -246,6 +254,10 @@ function calculate_extra(text,tilde_extra)
     extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'i')
     extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'t')
     extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'l')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'j')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'%[')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'%]')
+    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'% ')
     return extra_width
 end
 
