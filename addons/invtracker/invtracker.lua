@@ -57,13 +57,13 @@ local INVENTORY_SIZE_PACKET = 0x1C
 local GIL_ITEM_ID = 65535
 local NO_ITEM_ID = 0
 
-local hideKey = SCROLL_LOCK_KEY
+local hide_key = SCROLL_LOCK_KEY
 local is_hidden_by_cutscene = false
 local is_hidden_by_key = false
 local is_hidden_by_zoning = false
 
 defaults = {}
-defaults.HideKey = SCROLL_LOCK_KEY
+defaults.hideKey = SCROLL_LOCK_KEY
 defaults.slotImage = {}
 defaults.slotImage.sort = true
 defaults.slotImage.spacing = 4
@@ -245,7 +245,7 @@ local refresh_linkshell = false
 local last_treasure_count = 0
 
 config.register(settings, function(settings)
-    hideKey = settings.HideKey
+    hide_key = settings.hideKey
     xBase = settings.slotImage.pos.x
     yBase = settings.slotImage.pos.y
 end)
@@ -688,10 +688,10 @@ end
 
 function toggle_display_if_hide_key_is_pressed(key_pressed, key_down)
     if not is_hidden_by_zoning then
-        if (key_pressed == hideKey) and (key_down) and (is_hidden_by_key) and (not is_hidden_by_cutscene) then
+        if (key_pressed == hide_key) and (key_down) and (is_hidden_by_key) and (not is_hidden_by_cutscene) then
             is_hidden_by_key = false
             show()
-        elseif (key_pressed == hideKey) and (key_down) and (not is_hidden_by_key) and (not is_hidden_by_cutscene) then
+        elseif (key_pressed == hide_key) and (key_down) and (not is_hidden_by_key) and (not is_hidden_by_cutscene) then
             is_hidden_by_key = true
             hide()
         end

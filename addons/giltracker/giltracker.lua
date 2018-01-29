@@ -46,7 +46,7 @@ local ZONE_OUT_PACKET = 0x0B
 local ITEM_UPDATE_PACKET = 0x20
 local ITEM_MODIFY_PACKET = 0x1F
 
-local hideKey = SCROLL_LOCK_KEY
+local hide_key = SCROLL_LOCK_KEY
 local is_hidden_by_cutscene = false
 local is_hidden_by_key = false
 local is_hidden_by_zoning = false
@@ -111,7 +111,7 @@ local inventory_loaded = false
 local ready = false
 
 config.register(settings, function(settings)
-    hideKey = settings.hideKey
+    hide_key = settings.hideKey
     local windower_settings = windower.get_windower_settings()
     local xRes = windower_settings.ui_x_res
     local yRes = windower_settings.ui_y_res
@@ -239,10 +239,10 @@ end
 
 function toggle_display_if_hide_key_is_pressed(key_pressed, key_down)
     if not is_hidden_by_zoning then
-        if (key_pressed == hideKey) and (key_down) and (is_hidden_by_key) and (not is_hidden_by_cutscene) then
+        if (key_pressed == hide_key) and (key_down) and (is_hidden_by_key) and (not is_hidden_by_cutscene) then
             is_hidden_by_key = false
             show()
-        elseif (key_pressed == hideKey) and (key_down) and (not is_hidden_by_key) and (not is_hidden_by_cutscene) then
+        elseif (key_pressed == hide_key) and (key_down) and (not is_hidden_by_key) and (not is_hidden_by_cutscene) then
             is_hidden_by_key = true
             hide()
         end
