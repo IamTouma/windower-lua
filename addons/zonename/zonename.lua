@@ -59,7 +59,6 @@ defaults.zoneName.flags.italic = false
 defaults.zoneName.padding = 0
 defaults.zoneName.text = {}
 defaults.zoneName.text.size = 34
-defaults.zoneName.text.centerAdjust = 1.6
 defaults.zoneName.text.font = 'Century Schoolbook'
 defaults.zoneName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
 defaults.zoneName.text.alpha = 85
@@ -75,7 +74,6 @@ defaults.zoneName.text.stroke.blue = 38
 defaults.zoneName.text.visible = true
 defaults.zoneName.replaceAbbreviations = false
 defaults.zoneName.format = '%s'
-defaults.zoneName.tildeExtraWidth = 7
 defaults.regionName = {}
 defaults.regionName.pos = {}
 defaults.regionName.pos.x = 0
@@ -93,8 +91,7 @@ defaults.regionName.flags.bold = true
 defaults.regionName.flags.italic = false
 defaults.regionName.padding = 0
 defaults.regionName.text = {}
-defaults.regionName.text.size = 18
-defaults.regionName.text.centerAdjust = 1.4
+defaults.regionName.text.size = 16
 defaults.regionName.text.font = 'Century Schoolbook'
 defaults.regionName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
 defaults.regionName.text.alpha = 85
@@ -110,11 +107,11 @@ defaults.regionName.text.stroke.blue = 38
 defaults.regionName.text.visible = true
 defaults.regionName.format = '- %s -'
 defaults.regionName.replaceNationNames = true
-defaults.regionName.tildeExtraWidth = 4
 defaults.centered = true
 defaults.fadeTime = 1
 defaults.displayTime = 5
 defaults.waitTime = 2
+defaults.centerAdjustFactor = 1.5
 
 local settings = config.load(defaults)
 config.save(settings)
@@ -159,6 +156,10 @@ windower.register_event('prerender',function()
     if ready then refresh_display() end
 end)
 
+windower.register_event('postrender',function()
+    if center_ready then center_text() end
+end)
+
 function start_display()
     info = windower.ffxi.get_info()
     if not info.mog_house then
@@ -170,8 +171,8 @@ end
 function ready_display()
     setup_text(zone_text,zone_name)
     setup_text(region_text,region_name)
-    center_text()
     ready = true
+    center_ready = true
     last_update = os.clock()
 end
 
@@ -231,40 +232,36 @@ end
 
 function center_text()
     if (settings.centered) then
-        local zone_text_width = (string.len(zone_name) * (settings.zoneName.text.size/2))
-        local region_text_width = (string.len(region_name) * (settings.regionName.text.size/2))
-        zone_text:pos(
-            (xRes/2)
-                - (zone_text_width/2*settings.zoneName.text.centerAdjust)
-                + calculate_extra(zone_name,settings.zoneName.tildeExtraWidth)
-            ,(yRes/2) - (settings.zoneName.text.size * 2)
-        )
+        center_ready = false
+        local zone_text_width, zone_text_height = zone_text:extents()
+        local region_text_width, region_text_height = region_text:extents()
+        local full_height = zone_text_height + region_text_height
         region_text:pos(
-            (xRes/2)
-                - (region_text_width/2*settings.regionName.text.centerAdjust)
-                + calculate_extra(region_name,settings.regionName.tildeExtraWidth)
-            ,zone_text:pos_y() - (settings.regionName.text.size * 2)
+            (xRes/2)-(region_text_width/2) * settings.centerAdjustFactor,
+            (yRes/2) - full_height - 5
+        )
+        zone_text:pos(
+            (xRes/2)-(zone_text_width/2) * settings.centerAdjustFactor,
+            (yRes/2) - (full_height - region_text_height)
         )
     end
 end
 
-function calculate_extra(text,tilde_extra)
-    local extra_width = 0
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'%\'')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'i')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'t')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'l')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'j')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'%[')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'%]')
-    extra_width = extra_width + add_width_per_occurrence(text,tilde_extra,'% ')
-    return extra_width
-end
-
-function add_width_per_occurrence(text,tilde_extra,char)
-  local _, count = string.gsub(text, char, '')
-  return tilde_extra * count
-end
+--[[
+windower.register_event('load', function(...)
+  local adjustFactor = 1.5
+    xRes = windower.get_windower_settings().ui_x_res
+    yRes = windower.get_windower_settings().ui_y_res
+    t = texts.new('ShortTextThatReallyNeedsAnAdjustFactor')
+    t:size(32)
+    t:font('Century Schoolbook')
+    t:show()
+    coroutine.schedule(function()
+        x,y = t:extents()
+        t:pos(((xRes/2)-(x/2)*adjustFactor),(yRes/2)-y)
+    end, 1.000)
+end)
+]]
 
 function setup_text(textbox,text)
     textbox:text(text)
