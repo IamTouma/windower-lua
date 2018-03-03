@@ -111,7 +111,6 @@ defaults.centered = true
 defaults.fadeTime = 1
 defaults.displayTime = 5
 defaults.waitTime = 2
-defaults.centerAdjustFactor = 1.5
 
 local settings = config.load(defaults)
 config.save(settings)
@@ -127,7 +126,7 @@ config.register(settings, function(settings)
     windower_settings = windower.get_windower_settings()
     xRes = windower_settings.ui_x_res
     yRes = windower_settings.ui_y_res
-    local fade_millis = settings.fadeTime * 25
+    local fade_millis = settings.fadeTime * 20
     zone_fade_step = math.ceil(settings.zoneName.text.alpha / fade_millis)
     zone_stroke_fade_step = math.ceil(settings.zoneName.text.stroke.alpha / fade_millis)
     region_fade_step = math.ceil(settings.regionName.text.alpha / fade_millis)
@@ -233,15 +232,16 @@ end
 function center_text()
     if (settings.centered) then
         center_ready = false
+        local adjustFactor = windower_settings.x_res / windower_settings.ui_x_res
         local zone_text_width, zone_text_height = zone_text:extents()
         local region_text_width, region_text_height = region_text:extents()
         local full_height = zone_text_height + region_text_height
         region_text:pos(
-            (xRes/2)-(region_text_width/2) * settings.centerAdjustFactor,
+            (xRes/2)-(region_text_width/2) * adjustFactor,
             (yRes/2) - full_height - 5
         )
         zone_text:pos(
-            (xRes/2)-(zone_text_width/2) * settings.centerAdjustFactor,
+            (xRes/2)-(zone_text_width/2) * adjustFactor,
             (yRes/2) - (full_height - region_text_height)
         )
     end
