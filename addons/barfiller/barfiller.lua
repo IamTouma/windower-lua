@@ -199,6 +199,12 @@ windower.register_event('status change', function(new_status_id)
     end
 end)
 
+windower.register_event('incoming text', function(original, _modified, mode, _modified_mode)
+    if(mode == 143 or mode == 144 or mode == 148) then
+        set_dismiss_time()
+    end
+end)
+
 windower.register_event('keyboard', function(dik, flags, blocked)
   if not is_hidden_by_zoning then
     if dik == hideKey and flags == true and (is_hidden_by_key == true) and (is_hidden_by_cutscene == false) then
@@ -216,6 +222,14 @@ windower.register_event('keyboard', function(dik, flags, blocked)
     end
   end
 end)
+
+function set_dismiss_time(mode)
+    hide()
+    if clear_thread ~= nil and coroutine.status(clear_thread) ~= 'dead' then
+        coroutine.close(clear_thread)
+    end
+    clear_thread = coroutine.schedule(show,5)
+end
 
 function comma_value(amount)
   local formatted = amount

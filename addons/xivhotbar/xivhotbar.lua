@@ -461,3 +461,20 @@ windower.register_event('keyboard', function(dik, flags, blocked)
       end
   end
 end)
+
+
+windower.register_event('incoming text', function(original, _modified, mode, _modified_mode)
+    if(mode == 143 or mode == 144 or mode == 148) then
+        set_dismiss_time()
+    end
+end)
+
+function set_dismiss_time(mode)
+    ui:hide()
+    if clear_thread ~= nil and coroutine.status(clear_thread) ~= 'dead' then
+        coroutine.close(clear_thread)
+    end
+    clear_thread = coroutine.schedule(function()
+      ui:show(player.hotbar, player.hotbar_settings.active_environment)
+    end,5)
+end
