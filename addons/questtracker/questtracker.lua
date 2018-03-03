@@ -41,6 +41,7 @@ packets = require('packets')
 
 local SCROLL_LOCK_KEY = 70
 local UNDERSCORE_KEY = 12
+local CUTSCENE_STATUS_ID = 4
 
 local LOGIN_ZONE_PACKET = 0x0A
 local ZONE_OUT_PACKET = 0x0B
