@@ -300,6 +300,10 @@ windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_
     end
 end)
 
+windower.register_event('job change',function(main_job, main_job_level, sub_job, sub_job_level)
+    refresh_all = true
+end)
+
 windower.register_event('outgoing chunk',function(id,org,_modi,_is_injected,_is_blocked)
     if (id == EQUIPMENT_CHANGED_PACKET or id == EQUIPSET_CHANGED_PACKET) then
         refresh_all = true
