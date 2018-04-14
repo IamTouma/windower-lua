@@ -60,13 +60,13 @@ defaults.zoneName.padding = 0
 defaults.zoneName.text = {}
 defaults.zoneName.text.size = 34
 defaults.zoneName.text.font = 'Century Schoolbook'
-defaults.zoneName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
-defaults.zoneName.text.alpha = 85
+defaults.zoneName.text.fonts = {'sans-serif', 'Arial', 'Trebuchet MS'}
+defaults.zoneName.text.alpha = 235
 defaults.zoneName.text.red = 255
 defaults.zoneName.text.green = 255
 defaults.zoneName.text.blue = 193
 defaults.zoneName.text.stroke = {}
-defaults.zoneName.text.stroke.width = 4
+defaults.zoneName.text.stroke.width = 3
 defaults.zoneName.text.stroke.alpha = 30
 defaults.zoneName.text.stroke.red = 51
 defaults.zoneName.text.stroke.green = 47
@@ -94,12 +94,12 @@ defaults.regionName.text = {}
 defaults.regionName.text.size = 16
 defaults.regionName.text.font = 'Century Schoolbook'
 defaults.regionName.text.fonts = {'Lucida Console', 'sans-serif', 'Arial', 'Trebuchet MS'}
-defaults.regionName.text.alpha = 85
+defaults.regionName.text.alpha = 235
 defaults.regionName.text.red = 255
 defaults.regionName.text.green = 255
 defaults.regionName.text.blue = 193
 defaults.regionName.text.stroke = {}
-defaults.regionName.text.stroke.width = 4
+defaults.regionName.text.stroke.width = 3
 defaults.regionName.text.stroke.alpha = 30
 defaults.regionName.text.stroke.red = 51
 defaults.regionName.text.stroke.green = 47
@@ -126,11 +126,11 @@ config.register(settings, function(settings)
     windower_settings = windower.get_windower_settings()
     xRes = windower_settings.ui_x_res
     yRes = windower_settings.ui_y_res
-    local fade_millis = settings.fadeTime * 20
-    zone_fade_step = math.ceil(settings.zoneName.text.alpha / fade_millis)
-    zone_stroke_fade_step = math.ceil(settings.zoneName.text.stroke.alpha / fade_millis)
-    region_fade_step = math.ceil(settings.regionName.text.alpha / fade_millis)
-    region_stroke_fade_step = math.ceil(settings.zoneName.text.stroke.alpha / fade_millis)
+    local fade_millis = settings.fadeTime * 75
+    zone_fade_step = settings.zoneName.text.alpha / fade_millis
+    zone_stroke_fade_step = settings.zoneName.text.stroke.alpha / fade_millis
+    region_fade_step = settings.regionName.text.alpha / fade_millis
+    region_stroke_fade_step = settings.zoneName.text.stroke.alpha / fade_millis
 end)
 
 windower.register_event('addon command',function(command, regionName, zoneName)
@@ -151,14 +151,6 @@ windower.register_event('incoming chunk',function(id,org,_modi,_is_injected,_is_
     end
 end)
 
-windower.register_event('prerender',function()
-    if ready then refresh_display() end
-end)
-
-windower.register_event('postrender',function()
-    if center_ready then center_text() end
-end)
-
 function start_display()
     info = windower.ffxi.get_info()
     if not info.mog_house then
@@ -171,8 +163,9 @@ function ready_display()
     setup_text(zone_text,zone_name)
     setup_text(region_text,region_name)
     ready = true
-    center_ready = true
-    last_update = os.clock()
+    last_update = os.clock() + settings.waitTime
+    coroutine.schedule(refresh_display, 0.100 + settings.waitTime)
+    coroutine.schedule(center_text, 0.150 + settings.waitTime)
 end
 
 function setup_names(zone_id)
@@ -231,7 +224,6 @@ end
 
 function center_text()
     if (settings.centered) then
-        center_ready = false
         local adjustFactor = windower_settings.x_res / windower_settings.ui_x_res
         local zone_text_width, zone_text_height = zone_text:extents()
         local region_text_width, region_text_height = region_text:extents()
@@ -247,22 +239,6 @@ function center_text()
     end
 end
 
---[[
-windower.register_event('load', function(...)
-  local adjustFactor = 1.5
-    xRes = windower.get_windower_settings().ui_x_res
-    yRes = windower.get_windower_settings().ui_y_res
-    t = texts.new('ShortTextThatReallyNeedsAnAdjustFactor')
-    t:size(32)
-    t:font('Century Schoolbook')
-    t:show()
-    coroutine.schedule(function()
-        x,y = t:extents()
-        t:pos(((xRes/2)-(x/2)*adjustFactor),(yRes/2)-y)
-    end, 1.000)
-end)
-]]
-
 function setup_text(textbox,text)
     textbox:text(text)
     textbox:alpha(0)
@@ -271,12 +247,20 @@ function setup_text(textbox,text)
 end
 
 function refresh_display()
+    if ready then
+        update_banner()
+        coroutine.schedule(refresh_display, 0.010)
+
+    end
+end
+
+function update_banner()
     local time = os.clock() - last_update
-    if (time > (settings.fadeTime * 2) + settings.displayTime + settings.waitTime) then
+    if (time > (settings.fadeTime * 2) + settings.displayTime) then
         hide()
-    elseif (time > settings.fadeTime + settings.displayTime + settings.waitTime) then
+    elseif (time > settings.fadeTime + settings.displayTime) then
         fade_out()
-    elseif (time > settings.waitTime and time <= settings.fadeTime + settings.waitTime) then
+    elseif (time <= settings.fadeTime) then
         fade_in()
     end
 end
